@@ -1,0 +1,9 @@
+// enemy sprite
+$type "$spr"
+$basetexture "data/textures/enemy.png"
+$aligment "center"
+
+// enable alpha additive blending
+$renderstate "ALPHABLENDENABLE" "1"
+$renderstate "SRCBLEND" "SRCALPHA"
+$renderstate "DESTBLEND" "INVSRCALPHA"

@@ -1,0 +1,13 @@
+// Spaceship sprite
+$type "$spr"
+$basetexture "data/textures/spaceship.png"
+$aligment "center"
+
+// shader setup
+//$vertexshader "data/shaders/spr_l.vso"
+//$pixelshader "data/shaders/spr_l.pso"
+
+// enable alpha additive blending
+$renderstate "ALPHABLENDENABLE" "1"
+$renderstate "SRCBLEND" "SRCALPHA"
+$renderstate "DESTBLEND" "INVSRCALPHA"

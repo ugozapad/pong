@@ -1,0 +1,4 @@
+// Spaceship sprite
+$type "$x"
+$modelfile "data/models/test.x"
+$vertexshader "data/shaders/mdl_c.vso"

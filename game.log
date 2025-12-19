@@ -1,0 +1,14 @@
+Log started
+starting render ...
+num available adapters: 2
+adapter 0: NVIDIA GeForce RTX 2060 SUPER
+adapter 1: NVIDIA GeForce RTX 2060 SUPER
+T&L is supported
+Vertex shader version 3.0
+Pixel shader version 3.0
+Software Processing: false
+Sound initialization
+2 channel(s)
+Sound sampling rate: 48000
+CRender::Shutdown: unregistering 1 fonts
+CRender::Shutdown: unregistering 1 cached textures
