@@ -4,10 +4,10 @@
 #include <d3d9.h>
 
 #include "common.h"
+#include "Vector.h"
+#include "Matrix.h"
 
-#define INVALID_TEXTURE_HANDLE -1
-#define INVALID_SHADER_HANDLE -1
-#define INVALID_RENDER_HANDLE -1
+#define INVALID_RENDER_HANDLE -1 // Shared between texture, shader and model
 
 #define MAX_TEXTURES 256
 #define MAX_CONTAINERS 16
@@ -18,14 +18,6 @@
 typedef int HTEXTURE;
 typedef int HSHADER;
 typedef int HCFONT;
-
-// Matrix class
-class CMatrix
-{
-public:
-	float m_Matrix[4][4];
-
-};
 
 // Texture class
 class CTexture
@@ -160,6 +152,9 @@ private:
 	CShader				m_Shaders[MAX_SHADERS];
 	CFont*				m_pFonts[MAX_FONTS];
 	CModelInfo*			m_pModels[MAX_MODELS];
+
+	// Matrices
+	CMatrix		m_matProjection;
 
 	// Direct3D
 	IDirect3D9*			m_pd3d;

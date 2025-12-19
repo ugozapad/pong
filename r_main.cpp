@@ -117,6 +117,8 @@ CRender::CRender()
 
 	m_pd3d				= 0;
 	m_pd3dDevice		= 0;
+
+	m_matProjection.SetIdentity();
 }
 
 CRender::~CRender()
@@ -510,46 +512,6 @@ void CRender::Draw2DRectUV( HTEXTURE hTexture, float fX, float fY, float fWidth,
 	m_pd3dDevice->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, 4, 0, 2 );
 }
 
-void CRender::Draw2DText( HCFONT hFont, const char* pString, float fX, float fY, unsigned int uiColor )
-{
-	CFont* pFont = m_pFonts[ hFont ];
-
-	// Enable additive blending
-	m_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE );
-	m_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-	m_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE );
-
-	// DX9 half-pixel offset
-	float fTexelU = 1.0f / pFont->m_dwWidth;
-	float fTexelV = 1.0f / pFont->m_dwHeight;
-
-	size_t uiLength = strlen( pString );
-
-	for ( int i = 0; i < uiLength; i++ )
-	{
-		// First character in font texture is 32 ASCII code
-		int c = pString[ i ] - 32;
-
-		int iRow = c >> 4;
-		int iCol = c & 15;
-
-		// Font grid is fixed by 32 pixels per character
-		float fU0 = (iCol * 32.0f + 0.5f) * fTexelU;
-		float fU1 = ((iCol + 1) * 32.0f - 0.5f) * fTexelU;
-		float fV0 = (iRow * 32.0f + 0.5f) * fTexelV;
-		float fV1 = ((iRow + 1) * 32.0f - 0.5f) * fTexelV;
-
-		Draw2DRectUV( pFont->m_hFontTexture, fX, fY, 32.0f, 32.0f,
-			fU0, fU1, fV0, fV1, uiColor );
-
-		// Max width of character is 12 pixels
-		fX += 8.5f;
-	}
-
-	// Reset state
-	m_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE );
-}
-
 void CRender::Draw2DLine( float fX1, float fY1, float fX2, float fY2, unsigned int uiColor )
 {
 	// Lock vertex buffer
@@ -629,7 +591,7 @@ HTEXTURE CRender::RegisterTexture( const char* filename )
 	if ( FAILED( hr ) )
 	{
 		DPrintf( "Texture %s loading error: 0x%x\n", filename, hr );
-		return INVALID_TEXTURE_HANDLE;
+		return INVALID_RENDER_HANDLE;
 	}
 
 	// Allocate texture
@@ -650,7 +612,7 @@ HTEXTURE CRender::RegisterTexture( const char* filename )
 
 void CRender::UnregisterTexture( HTEXTURE hTexture )
 {
-	if ( hTexture != INVALID_TEXTURE_HANDLE )
+	if ( hTexture != INVALID_RENDER_HANDLE )
 	{
 		assert( m_pTextures[ hTexture ] );
 		assert( m_pTextures[ hTexture ]->m_pTexture );
@@ -666,7 +628,7 @@ void CRender::UnregisterTexture( HTEXTURE hTexture )
 
 void CRender::SetTexture( HTEXTURE hTexture, int stage )
 {
-	if ( hTexture != INVALID_TEXTURE_HANDLE )
+	if ( hTexture != INVALID_RENDER_HANDLE )
 	{
 		assert( m_pTextures[ hTexture ] );
 		assert( m_pTextures[ hTexture ]->m_pTexture );
@@ -684,7 +646,7 @@ void CRender::GetTextureSize( HTEXTURE hTexture, int iLevel, int* pWidth, int* p
 	assert( pWidth );
 	assert( pHeight );
 
-	if ( hTexture != INVALID_TEXTURE_HANDLE )
+	if ( hTexture != INVALID_RENDER_HANDLE )
 	{
 		assert( m_pTextures[ hTexture ] );
 		assert( m_pTextures[ hTexture ]->m_pTexture );
@@ -697,102 +659,6 @@ void CRender::GetTextureSize( HTEXTURE hTexture, int iLevel, int* pWidth, int* p
 		*pWidth = desc.Width;
 		*pHeight = desc.Height;
 	}
-}
-
-IModel* CRender::RegisterModel( const char *pFilename, const char* pExtension /*= NULL*/ )
-{
-	IModel* pModel = NULL;
-
-	for ( int i = 0; i < m_dwNumModels; i++ )
-	{
-		if ( strcmp( pFilename, m_pModels[ i ]->m_Filename ) == 0 )
-		{
-			pModel = m_pModels[ i ]->m_pModel;
-			return pModel;
-		}
-	}
-
-	// Find model containter by extension.
-	if ( pExtension )
-	{
-		for ( int j = 0; j < m_dwNumContainers; j++ )
-		{
-			if ( strcmp( m_pContainers[j]->m_Extension, pExtension ) == 0 )
-			{
-				pModel = m_pContainers[j]->CreateModel( pFilename );
-				break;
-			}
-		}
-	}
-
-	if ( pModel == NULL )
-		DError( "CRender::RegisterModel: Failed to register model '%s' with unknown extension %s\n", pFilename, pExtension );
-
-	if ( m_bTrace )
-		DPrintf( "CRender::RegisterModel: register model \"%s\"...\n", pFilename );
-
-	// Allocate model info entry
-	int iHandle = m_dwNumModels++;
-	m_pModels[ iHandle ] = NEW CModelInfo;
-	m_pModels[ iHandle ]->m_pModel = pModel;
-	strcpy( m_pModels[ iHandle ]->m_Filename, pFilename );
-
-	return pModel;
-}
-
-IModel* CRender::LoadModel( const char* pFilename )
-{
-	static char szBuffer[ 128 ];
-	const char* pExtension = NULL;
-
-	size_t uiLength = strlen( pFilename );
-	pExtension = &pFilename[ uiLength - 3 ];
-
-	// Try to make sure that passed filename are a texture
-	if ( stricmp( pExtension, "png" ) == 0 || 
-		 stricmp( pExtension, "jpg" ) == 0 ||
-		 stricmp( pExtension, "tga" ) == 0 || 
-		 stricmp( pExtension, "spr" ) == 0 )
-		return RegisterModel( pFilename, "$spr" );
-
-	// Load model config
-	if ( stricmp( pExtension, "txt" ) == 0 )
-	{
-		HFILE hFile = g_pFS->OpenFile( pFilename, "r" );
-		if ( hFile == INVALID_FILE_HANDLE )
-		{
-			DError( "CRender::LoadModel: Failed to open model text file: %s\n", pFilename );
-			return NULL;
-		}
-		
-		CFileHandle* pFileHandle = g_pFS->GetFileHandle( hFile );
-		
-		// Parse model config
-		while ( true )
-		{
-			int result = fscanf( pFileHandle->m_pFile, "%s", szBuffer );
-			if ( result == EOF )
-				break;
-
-			if ( stricmp( szBuffer, "$type" ) == 0 )
-			{
-				// Load the extension.
-				fscanf( pFileHandle->m_pFile, "%s", szBuffer );
-				TrimString( szBuffer );
-				
-				g_pFS->CloseFile( hFile );
-
-				return RegisterModel( pFilename, szBuffer );
-			}
-			else
-			{
-				// Probably a commentary, skip it
-				fgets( szBuffer, 128, pFileHandle->m_pFile );
-			}
-		}
-	}
-
-	return NULL;
 }
 
 IDirect3DDevice9* CRender::Dev()
@@ -819,25 +685,6 @@ void CRender::SetViewport( SVIEWPORT* pViewport )
 
 void CRender::Push2DMatrix( SVIEWPORT* pViewport )
 {
-	D3DMATRIX matProj;
-
-	// Fill with zeros
-	memset( &matProj, 0, sizeof( matProj ) );
-
-	FLOAT fLeft = 0.0f;
-	FLOAT fRight = (float)pViewport->Width;
-	FLOAT fBottom = 0.0f;
-	FLOAT fTop = (float)pViewport->Height;
-	FLOAT fZNear = -1.0f;
-	FLOAT fZFar = 1.0f;
-
-	matProj.m[ 0 ][ 0 ] = 2.0f / (fRight - fLeft);
-	matProj.m[ 1 ][ 1 ] = 2.0f / (fTop - fBottom);
-	matProj.m[ 2 ][ 2 ] = 1.0f / (fZFar - fZNear);
-	matProj.m[ 3 ][ 0 ] = -1.0f - 2.0f * fLeft / (fRight - fLeft);
-	matProj.m[ 3 ][ 1 ] = 1.0f + 2.0f * fTop / (fBottom - fTop);
-	matProj.m[ 3 ][ 2 ] = fZNear / (fZNear - fZFar);
-	matProj.m[ 3 ][ 3 ] = 1.0f;
-
-	m_pd3dDevice->SetTransform( D3DTS_PROJECTION, &matProj );
+	m_matProjection.OrthoOffCenterLH( 0.0f, (float)pViewport->Width, 0.0f, (float)pViewport->Height, -1.0f, 1.0f );
+	m_pd3dDevice->SetTransform( D3DTS_PROJECTION, ( D3DMATRIX *)&m_matProjection);
 }

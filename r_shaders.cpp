@@ -17,7 +17,7 @@ HSHADER CRender::RegisterShader( const char* pFilename )
 
 	HFILE hFile = g_pFS->OpenFile( pFilename, "rb" );
 	if ( hFile == -1 )
-		return INVALID_SHADER_HANDLE;
+		return INVALID_RENDER_HANDLE;
 
 	size_t uiFileLength = g_pFS->GetFileLength( hFile );
 
@@ -54,7 +54,7 @@ HSHADER CRender::RegisterShader( const char* pFilename )
 
 void CRender::UnregisterShader( HSHADER hShader )
 {
-	if ( hShader != INVALID_SHADER_HANDLE )
+	if ( hShader != INVALID_RENDER_HANDLE )
 	{
 		if ( m_Shaders[ hShader ].m_bIsPixelShader )
 		{
@@ -77,12 +77,17 @@ void CRender::UnregisterShader( HSHADER hShader )
 
 void CRender::SetShader( HSHADER hShader )
 {
-	if ( hShader != INVALID_SHADER_HANDLE )
+	if ( hShader != INVALID_RENDER_HANDLE )
 	{
 		if ( m_Shaders[ hShader ].m_bIsPixelShader )
 			 m_pd3dDevice->SetPixelShader( m_Shaders[ hShader ].m_pPixelShader );
 		else
 			 m_pd3dDevice->SetVertexShader( m_Shaders[ hShader ].m_pVertexShader );
+	}
+	else
+	{
+		m_pd3dDevice->SetVertexShader( NULL );
+		m_pd3dDevice->SetPixelShader( NULL );
 	}
 }
 

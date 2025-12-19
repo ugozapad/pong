@@ -57,3 +57,43 @@ void CRender::UnregisterFont( HCFONT hFont )
 		m_dwNumFonts--;
 	}
 }
+
+void CRender::Draw2DText( HCFONT hFont, const char* pString, float fX, float fY, unsigned int uiColor )
+{
+	CFont* pFont = m_pFonts[ hFont ];
+
+	// Enable additive blending
+	m_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE );
+	m_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+	m_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE );
+
+	// DX9 half-pixel offset
+	float fTexelU = 1.0f / pFont->m_dwWidth;
+	float fTexelV = 1.0f / pFont->m_dwHeight;
+
+	size_t uiLength = strlen( pString );
+
+	for ( int i = 0; i < uiLength; i++ )
+	{
+		// First character in font texture is 32 ASCII code
+		int c = pString[ i ] - 32;
+
+		int iRow = c >> 4;
+		int iCol = c & 15;
+
+		// Font grid is fixed by 32 pixels per character
+		float fU0 = (iCol * 32.0f + 0.5f) * fTexelU;
+		float fU1 = ((iCol + 1) * 32.0f - 0.5f) * fTexelU;
+		float fV0 = (iRow * 32.0f + 0.5f) * fTexelV;
+		float fV1 = ((iRow + 1) * 32.0f - 0.5f) * fTexelV;
+
+		Draw2DRectUV( pFont->m_hFontTexture, fX, fY, 32.0f, 32.0f,
+			fU0, fU1, fV0, fV1, uiColor );
+
+		// Max width of character is 12 pixels
+		fX += 8.5f;
+	}
+
+	// Reset state
+	m_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE );
+}
