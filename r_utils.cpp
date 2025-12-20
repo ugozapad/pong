@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "debug.h"
 #include "filesystem.h"
 #include "render.h"

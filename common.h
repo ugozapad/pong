@@ -19,8 +19,6 @@ struct SVIEWPORT
 	int Height;
 };
 
-#include <assert.h>
-
 #include "Vector.h"
 
 // Global functions

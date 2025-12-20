@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-#include <assert.h>
 #include "debug.h"
 
 FILE* g_logFile = 0;
